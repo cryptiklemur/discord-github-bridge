@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "module": "esnext",
+    "moduleResolution": "nodenext",
+    "lib": ["esnext"],
+    "alwaysStrict": true,
+    "strict": true,
+    "sourceMap": true,
+    "types": ["node"],
+  },
+  "include": [
+    "./src/*.ts",
+    "./src/**/*.ts",
+  ],
+  "exclude": ["node_modules/"]
+}
