@@ -1,10 +1,10 @@
 import { SlashCommand, CommandContext, SlashCreator } from 'slash-create';
-import { db } from '../db/client.ts';
-import { repository, tag } from '../db/schema.ts';
+import { db, getRepoWithUserByChannel } from '../db/client.ts';
+import { repository } from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
 import { Client } from 'eris';
-import { fetchIssueTemplate, fetchLabels } from '../service/github.ts';
 import { syncForum } from '../service/sync.ts';
+import { fetchUser } from '../utils/fetchUser.js';
 
 export default class SyncRepositoryCommand extends SlashCommand {
   constructor(
@@ -26,12 +26,6 @@ export default class SyncRepositoryCommand extends SlashCommand {
         },
         {
           type: 3, // STRING
-          name: 'repo_token',
-          description: 'Optional GitHub token to use during sync',
-          required: false
-        },
-        {
-          type: 3, // STRING
           name: 'template',
           description: 'Optional issue template name to override',
           required: false
@@ -43,12 +37,13 @@ export default class SyncRepositoryCommand extends SlashCommand {
   async run(ctx: CommandContext) {
     await ctx.defer(true);
     const channelId = ctx.options.channel;
-    const token = ctx.options.repo_token;
     const overrideTemplate = ctx.options.template ?? null;
 
-    let repo = await db.query.repository.findFirst({
-      where: eq(repository.discordChannelId, BigInt(channelId))
-    });
+    if (!(await fetchUser(ctx))) {
+      return;
+    }
+
+    const repo = await getRepoWithUserByChannel(channelId);
 
     if (!repo) {
       await ctx.send({
@@ -58,31 +53,21 @@ export default class SyncRepositoryCommand extends SlashCommand {
       return;
     }
 
-    if (overrideTemplate || token) {
+    if (overrideTemplate) {
       const update: Partial<typeof repository.$inferInsert> = {};
       if (overrideTemplate) {
         update.issueTemplate = overrideTemplate;
       }
-      if (token) {
-        update.githubToken = token;
-      }
 
-      const results = await db.update(repository).set(update).where(eq(repository.id, repo.id)).returning();
-      repo = results[0];
+      await db.update(repository).set(update).where(eq(repository.id, repo.id));
     }
 
     try {
-      const { labels, defaultLabels } = await syncForum(repo);
-      if (defaultLabels.length > 0) {
-        repo = await db.update(repository)
-          .set({defaultLabels})
-          .where(eq(repository.id, repo.id))
-          .returning().then(x => x[0]);
-      }
+      await syncForum((await getRepoWithUserByChannel(channelId))!);
 
       await ctx.send({
         ephemeral: true,
-        content: `Synced ${labels.length} labels and updated post guidelines.`
+        content: `Synced labels and updated post guidelines.`
       });
     } catch (e) {
       await ctx.send({

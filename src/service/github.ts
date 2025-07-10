@@ -1,7 +1,9 @@
 import { Octokit } from 'octokit';
 import { Base64 } from 'js-base64';
+import { createAppAuth } from '@octokit/auth-app';
 import yaml from 'yaml';
-import { repository } from '../db/schema.ts';
+import { RepositoryWithUser } from '../db/schema.ts';
+import { OctokitOptions } from '@octokit/core/types';
 
 export function extractLabelsFromTemplate(templateContent: string, isYaml: boolean): string[] {
   if (isYaml) {
@@ -36,9 +38,9 @@ export function extractLabelsFromTemplate(templateContent: string, isYaml: boole
 }
 
 export async function fetchIssueTemplate(
-  repoEntity: typeof repository.$inferSelect
-): Promise<{ content: string | null; defaultLabels: string[], isYaml: boolean }> {
-  const octokit = new Octokit({ auth: repoEntity.githubToken });
+  repoEntity: RepositoryWithUser
+): Promise<{ content: string | null; defaultLabels: string[]; isYaml: boolean }> {
+  const octokit = getClient(repoEntity.user.githubInstallationId);
   if (!repoEntity.issueTemplate) {
     return { content: null, defaultLabels: [], isYaml: false };
   }
@@ -60,7 +62,7 @@ export async function fetchIssueTemplate(
       if (!('content' in res.data)) continue;
       const content = Base64.decode(res.data.content as string);
       const isYaml = ext.endsWith('yml') || ext.endsWith('yaml');
-      const defaultLabels = extractLabelsFromTemplate(content, isYaml)
+      const defaultLabels = extractLabelsFromTemplate(content, isYaml);
 
       return { content, defaultLabels, isYaml };
     } catch (err: any) {
@@ -71,8 +73,8 @@ export async function fetchIssueTemplate(
   return { content: null, defaultLabels: [], isYaml: false };
 }
 
-export async function fetchLabels(repoEntity: typeof repository.$inferSelect) {
-  const octokit = new Octokit({ auth: repoEntity.githubToken });
+export async function fetchLabels(repoEntity: RepositoryWithUser) {
+  const octokit = getClient(repoEntity.user.githubInstallationId);
   const match = repoEntity.url.match(/github\.com\/([^/]+)\/([^/]+)/);
   const [, owner, repo] = match!;
   const labels = await octokit.rest.issues.listLabelsForRepo({ owner, repo });
@@ -111,4 +113,54 @@ export function parseYamlIssueTemplate(yamlContent: string): string {
   }
 
   return parts.join('\n');
+}
+
+const WEBHOOK_DOMAIN = (process.env.WEBHOOK_DOMAIN ?? 'https://dgb.le.mr/').replaceAll(/\/$/gm, '');
+
+export async function createOrUpdateWebhookIfMissing(repoEntity: RepositoryWithUser): Promise<boolean> {
+  const match = repoEntity.url.match(/github\.com\/([^/]+)\/([^/]+)/);
+  if (!match) throw new Error(`Invalid GitHub URL: ${repoEntity.url}`);
+  const [, owner, repo] = match;
+
+  const octokit = getClient(repoEntity.user.githubInstallationId);
+  const webhookUrl = WEBHOOK_DOMAIN.trimEnd() + '/github/webhook';
+
+  // Check existing hooks
+  const hooks = await octokit.rest.repos.listWebhooks({ owner, repo });
+
+  const alreadyExists = hooks.data.some((hook) => hook.config?.url === webhookUrl);
+
+  if (alreadyExists) {
+    console.log(`[GitHub] Webhook already exists for ${owner}/${repo}`);
+    return false;
+  }
+
+  // Create webhook
+  await octokit.rest.repos.createWebhook({
+    owner,
+    repo,
+    config: {
+      url: webhookUrl,
+      content_type: 'json',
+      secret: repoEntity.githubWebhookSecret,
+      insecure_ssl: '0'
+    },
+    events: ['issues', 'issue_comment'],
+    active: true
+  });
+
+  console.log(`[GitHub] Webhook created for ${owner}/${repo}`);
+  return true;
+}
+
+export function getClient(installationId?: number): Octokit {
+  const auth: OctokitOptions['auth'] = {
+    appId: process.env.GITHUB_APP_ID!,
+    privateKey: Buffer.from(process.env.GITHUB_APP_PRIVATE_KEY!, 'base64').toString('utf8')
+  };
+  if (installationId) {
+    auth.installationId = installationId;
+  }
+
+  return new Octokit({ authStrategy: createAppAuth, auth });
 }

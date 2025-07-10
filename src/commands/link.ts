@@ -1,8 +1,10 @@
+import crypto from 'node:crypto';
 import { SlashCommand, SlashCreator, CommandContext } from 'slash-create';
-import { db } from '../db/client.ts';
-import { repository } from '../db/schema.ts';
-import {and, eq} from 'drizzle-orm';
+import { db, getRepoWithUserByChannel } from '../db/client.ts';
+import { repository, user } from '../db/schema.ts';
+import { and, eq } from 'drizzle-orm';
 import { syncForum } from '../service/sync.ts';
+import { fetchUser } from '../utils/fetchUser.js';
 
 export default class linkRepositoryCommand extends SlashCommand {
   constructor(creator: SlashCreator) {
@@ -27,12 +29,6 @@ export default class linkRepositoryCommand extends SlashCommand {
         },
         {
           type: 3, // STRING
-          name: 'github_token',
-          description: 'GitHub Personal Access Token with repo access',
-          required: true
-        },
-        {
-          type: 3, // STRING
           name: 'template',
           description: 'Optional issue template to use when syncing to GitHub',
           required: false
@@ -43,10 +39,14 @@ export default class linkRepositoryCommand extends SlashCommand {
 
   async run(ctx: CommandContext) {
     await ctx.defer(true);
-    const url = ctx.options.repo_url;
-    const channel = BigInt(ctx.options.channel);
-    const githubToken = ctx.options.github_token;
+    const url = ctx.options.repo_url.toLowerCase();
+    const channel = ctx.options.channel;
     const issueTemplate = ctx.options.template ?? null;
+
+    const userEntity = await fetchUser(ctx);
+    if (!userEntity) {
+      return;
+    }
 
     // Basic GitHub URL validation
     if (!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/.test(url)) {
@@ -58,34 +58,32 @@ export default class linkRepositoryCommand extends SlashCommand {
     }
 
     try {
-      const existing = await db.select().from(repository).where(and(eq(repository.url, url), eq(repository.discordChannelId, channel))).get();
+      const existing = await db
+        .select()
+        .from(repository)
+        .where(and(eq(repository.url, url), eq(repository.discordChannelId, channel)))
+        .get();
       if (existing) {
         await ctx.send({
           ephemeral: true,
-          content: 'That repository is already registered to that channel. Run the sync command if you want to sync changes',
+          content:
+            'That repository is already registered to that channel. Run the sync command if you want to sync changes'
         });
         return;
       }
 
-      let repo = await db
-        .insert(repository)
-        .values({
-          url,
-          githubToken,
-          discordServerId: BigInt(ctx.guildID!),
-          discordChannelId: channel,
-          issueTemplate
-        })
-        .returning().then(x => x[0]);
+      await db.insert(repository).values({
+        url,
+        githubWebhookSecret: crypto.randomBytes(32).toString('hex'),
+        discordServerId: ctx.guildID!,
+        discordChannelId: channel,
+        issueTemplate,
+        userId: userEntity.id
+      });
+      const repo = (await getRepoWithUserByChannel(channel))!;
 
       try {
-        const {defaultLabels} = await syncForum(repo);
-        if (defaultLabels.length > 0) {
-          repo = await db.update(repository)
-            .set({defaultLabels})
-            .where(eq(repository.id, repo.id))
-            .returning().then(x => x[0]);
-        }
+        await syncForum(repo);
       } catch (e) {
         await db.delete(repository).where(and(eq(repository.url, url), eq(repository.discordChannelId, channel)));
         throw e;
@@ -93,7 +91,7 @@ export default class linkRepositoryCommand extends SlashCommand {
 
       await ctx.send({
         ephemeral: true,
-        content: `Repository linked: ${url} → <#${channel}>${issueTemplate ? " - Template - " + issueTemplate : ''}`
+        content: `Repository linked: ${url} → <#${channel}>${issueTemplate ? ' - Template - ' + issueTemplate : ''}`
       });
     } catch (err) {
       console.error(err);

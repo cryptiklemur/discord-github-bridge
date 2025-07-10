@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { Client } from 'eris';
 import { SlashCreator, GatewayServer } from 'slash-create';
 import * as commands from './commands.ts';
+import { startServer } from './webserver/app.js';
 
 export const client = new Client(process.env.DISCORD_BOT_TOKEN!);
 
@@ -38,7 +39,7 @@ async function main() {
     console.error(`Command ${command.commandName} errored:`, error.stack || error.toString())
   );
 
-  await client.connect();
+  await Promise.all([client.connect(), startServer(Number(process.env.PORT ?? '3000'))]);
 }
 
 main()
