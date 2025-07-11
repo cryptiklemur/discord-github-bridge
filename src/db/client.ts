@@ -1,13 +1,12 @@
-import { drizzle } from 'drizzle-orm/libsql/node';
+import { drizzle } from 'drizzle-orm/mysql2';
 import * as schema from './schema.ts';
 import { eq } from 'drizzle-orm';
 import { FullRepository } from './schema.ts';
 
 export const db = drizzle({
-  connection: {
-    url: process.env.DATABASE_URL!
-  },
-  schema
+  schema,
+  mode: 'default',
+  connection: process.env.DATABASE_URL!
 });
 
 export async function getRepo(channelId: string): Promise<FullRepository | undefined> {

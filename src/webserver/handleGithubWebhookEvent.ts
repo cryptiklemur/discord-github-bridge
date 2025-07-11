@@ -8,8 +8,6 @@ import { issue, comment, repository, tag, FullRepository } from '../db/schema.ts
 import { verifySignature } from './app.js';
 import { syncForum } from '../service/sync.js';
 import { getClient } from '../service/github.js';
-import { handleReopenedIssue } from './handlers/handleReopenedIssue';
-import * as path from 'node:path';
 
 export function stripAttachmentTags(body: string): string {
   return (

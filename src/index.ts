@@ -5,7 +5,6 @@ import { SlashCreator, GatewayServer } from 'slash-create';
 import * as commands from './commands.ts';
 import { startServer } from './webserver/app.js';
 import {
-  handleNewDiscordThread,
   handleNewDiscordMessageInThread,
   handleEditedDiscordMessageInThread,
   handleDeletedDiscordMessageInThread,

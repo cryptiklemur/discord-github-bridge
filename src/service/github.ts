@@ -4,6 +4,8 @@ import { createAppAuth } from '@octokit/auth-app';
 import yaml from 'yaml';
 import { FullRepository } from '../db/schema.ts';
 import { OctokitOptions } from '@octokit/core/types';
+import * as process from 'node:process';
+import * as fs from 'node:fs';
 
 export function extractLabelsFromTemplate(templateContent: string, isYaml: boolean): string[] {
   if (isYaml) {
@@ -154,9 +156,18 @@ export async function createOrUpdateWebhookIfMissing(repoEntity: FullRepository)
 }
 
 export function getClient(installationId?: number): Octokit {
+  let privateKey: string;
+  if (process.env.GITHUB_APP_PRIVATE_KEY) {
+    privateKey = Buffer.from(process.env.GITHUB_APP_PRIVATE_KEY!, 'base64').toString('utf8');
+  } else if (process.env.GITHUB_APP_PRIVATE_KEY_PATH) {
+    privateKey = fs.readFileSync(process.env.GITHUB_APP_PRIVATE_KEY_PATH, 'utf8');
+  } else {
+    throw new Error('No Github Private Key specified');
+  }
+
   const auth: OctokitOptions['auth'] = {
     appId: process.env.GITHUB_APP_ID!,
-    privateKey: Buffer.from(process.env.GITHUB_APP_PRIVATE_KEY!, 'base64').toString('utf8')
+    privateKey: privateKey
   };
   if (installationId) {
     auth.installationId = installationId;

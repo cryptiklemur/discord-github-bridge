@@ -1,12 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1752193037861,
-      "tag": "0000_cultured_quasar",
+      "version": "5",
+      "when": 1752195960416,
+      "tag": "0000_lame_network",
       "breakpoints": true
     }
   ]

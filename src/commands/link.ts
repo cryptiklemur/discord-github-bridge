@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { SlashCommand, SlashCreator, CommandContext } from 'slash-create';
 import { db, getRepo } from '../db/client.ts';
-import { repository, user } from '../db/schema.ts';
+import { repository } from '../db/schema.ts';
 import { and, eq } from 'drizzle-orm';
 import { syncForum } from '../service/sync.ts';
 import { fetchUser } from '../utils/fetchUser.js';
@@ -61,8 +61,7 @@ export default class linkRepositoryCommand extends SlashCommand {
       const existing = await db
         .select()
         .from(repository)
-        .where(and(eq(repository.url, url), eq(repository.discordChannelId, channel)))
-        .get();
+        .where(and(eq(repository.url, url), eq(repository.discordChannelId, channel)));
       if (existing) {
         await ctx.send({
           ephemeral: true,

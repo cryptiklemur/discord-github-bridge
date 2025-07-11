@@ -9,7 +9,7 @@ RUN chmod +x /app/entrypoint.sh
 
 # Install dependencies first (for caching)
 COPY package*.json ./
-RUN npm install --production
+RUN npm ci --production
 
 # Copy the rest of the source code
 COPY . .

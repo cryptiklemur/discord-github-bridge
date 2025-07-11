@@ -1,65 +1,87 @@
-import { blob, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { InferSelectModel, relations, sql } from 'drizzle-orm';
+import { boolean, int, json, mysqlTable, varchar, timestamp, uniqueIndex, text } from 'drizzle-orm/mysql-core';
+import { InferSelectModel, relations } from 'drizzle-orm';
 
-export const user = sqliteTable('user', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  discordUserId: text('discord_user_id').notNull(),
-  githubUserId: integer('github_user_id').notNull(),
-  githubLogin: text('github_login').notNull(),
-  githubInstallationId: integer('github_installation_id').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(sql`CURRENT_TIMESTAMP`)
-});
+export const user = mysqlTable(
+  'user',
+  {
+    id: int('id').primaryKey().autoincrement(),
+    discordUserId: varchar('discord_user_id', { length: 32 }).notNull(),
+    githubUserId: int('github_user_id').notNull(),
+    githubLogin: varchar('github_login', { length: 32 }).notNull(),
+    githubInstallationId: int('github_installation_id').notNull(),
+    createdAt: timestamp('created_at').defaultNow()
+  },
+  (table) => [uniqueIndex('user_discord_id_unique').on(table.discordUserId, table.githubUserId)]
+);
 
-export const repository = sqliteTable('repository', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  url: text('url').notNull(),
-  githubWebhookSecret: text('github_webhook_secret').notNull(),
-  discordServerId: text('discord_server_id').notNull(),
-  discordChannelId: text('discord_channel_id').notNull(),
-  issueTemplate: text('issue_template'), // optional
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(sql`CURRENT_TIMESTAMP`),
-  defaultLabels: text('default_labels', { mode: 'json' }).$type<string[]>(),
-  userId: integer('user_id').notNull()
-});
+export const repository = mysqlTable(
+  'repository',
+  {
+    id: int('id').primaryKey().autoincrement(),
+    url: varchar('url', { length: 256 }).notNull(),
+    githubWebhookSecret: text('github_webhook_secret').notNull(),
+    discordServerId: varchar('discord_server_id', { length: 32 }).notNull(),
+    discordChannelId: varchar('discord_channel_id', { length: 32 }).notNull(),
+    issueTemplate: text('issue_template'), // optional
+    createdAt: timestamp('created_at').defaultNow(),
+    defaultLabels: json('default_labels').$type<string[]>(),
+    userId: int('user_id').notNull()
+  },
+  (table) => [uniqueIndex('repository_discord_channel_unique').on(table.url, table.discordChannelId)]
+);
 
-export const issue = sqliteTable('issue', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  repositoryId: integer('repository_id').notNull(),
-  githubIssueId: integer('github_issue_id'),
-  githubIssueNumber: integer('github_issue_number'),
-  discordForumPostId: blob('discord_forum_post_id'),
-  firstDiscordMessageId: text('first_discord_message_id'),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(sql`CURRENT_TIMESTAMP`),
-  githubAuthorId: integer('github_author_id'),
-  githubAuthorName: text('github_author_name'),
-  discordAuthorId: text('discord_author_id'),
-  discordAuthorName: text('discord_author_name'),
-  isGithubSynced: integer('is_github_synced', { mode: 'boolean' }).default(false),
-  isDiscordSynced: integer('is_discord_synced', { mode: 'boolean' }).default(false)
-});
+export const issue = mysqlTable(
+  'issue',
+  {
+    id: int('id').primaryKey().autoincrement(),
+    repositoryId: int('repository_id').notNull(),
+    githubIssueId: int('github_issue_id'),
+    githubIssueNumber: int('github_issue_number'),
+    discordForumPostId: varchar('discord_forum_post_id', { length: 32 }),
+    firstDiscordMessageId: varchar('first_discord_message_id', { length: 32 }),
+    createdAt: timestamp('created_at').defaultNow(),
+    githubAuthorId: int('github_author_id'),
+    githubAuthorName: varchar('github_author_name', { length: 128 }),
+    discordAuthorId: varchar('discord_author_id', { length: 32 }),
+    discordAuthorName: varchar('discord_author_name', { length: 128 }),
+    isGithubSynced: boolean('is_github_synced').default(false),
+    isDiscordSynced: boolean('is_discord_synced').default(false)
+  },
+  (table) => [uniqueIndex('issue_github_id_unique').on(table.discordForumPostId, table.githubIssueId)]
+);
 
-export const comment = sqliteTable('comment', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  githubCommentId: integer('github_comment_id'),
-  discordMessageId: text('discord_message_id'),
-  issueId: integer('issue_id').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(sql`CURRENT_TIMESTAMP`),
-  githubAuthorId: integer('github_author_id'),
-  githubAuthorName: text('github_author_name'),
-  discordAuthorId: text('discord_author_id'),
-  discordAuthorName: text('discord_author_name'),
-  isGithubSynced: integer('is_github_synced', { mode: 'boolean' }).default(false),
-  isDiscordSynced: integer('is_discord_synced', { mode: 'boolean' }).default(false)
-});
+export const comment = mysqlTable(
+  'comment',
+  {
+    id: int('id').primaryKey().autoincrement(),
+    githubCommentId: int('github_comment_id'),
+    discordMessageId: varchar('discord_message_id', { length: 32 }),
+    issueId: int('issue_id').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    githubAuthorId: int('github_author_id'),
+    githubAuthorName: varchar('github_author_name', { length: 128 }),
+    discordAuthorId: varchar('discord_author_id', { length: 32 }),
+    discordAuthorName: varchar('discord_author_name', { length: 128 }),
+    isGithubSynced: boolean('is_github_synced').default(false),
+    isDiscordSynced: boolean('is_discord_synced').default(false)
+  },
+  (table) => [uniqueIndex('comment_github_id_unique').on(table.discordMessageId, table.githubCommentId)]
+);
 
-export const tag = sqliteTable('tag', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  repositoryId: integer('repository_id').notNull(),
-  githubLabelId: integer('github_label_id').notNull(),
-  githubLabelName: text('github_label_name').notNull(),
-  discordTagId: text('discord_tag_id'), // nullable until created
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(sql`CURRENT_TIMESTAMP`)
-});
+export const tag = mysqlTable(
+  'tag',
+  {
+    id: int('id').primaryKey().autoincrement(),
+    repositoryId: int('repository_id').notNull(),
+    githubLabelId: int('github_label_id').notNull(),
+    githubLabelName: varchar('github_label_name', { length: 128 }).notNull(),
+    discordTagId: varchar('discord_tag_id', { length: 32 }), // nullable until created
+    createdAt: timestamp('created_at').defaultNow()
+  },
+  (table) => [
+    uniqueIndex('tag_repo_label_discord_unique').on(table.repositoryId, table.githubLabelId, table.discordTagId)
+  ]
+);
 
 export const userRelations = relations(user, ({ many }) => ({
   repositories: many(repository)

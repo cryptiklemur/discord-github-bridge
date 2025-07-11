@@ -1,8 +1,14 @@
 #!/bin/sh
 set -e
 
+npm ci
+
 # Run database migrations
 npm run migrate
 
 # Start the app
-npm start
+if [ "$NODE_ENV" = "development" ]; then
+  npm run dev
+else
+  npm start
+fi
