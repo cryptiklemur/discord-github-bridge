@@ -1,49 +1,71 @@
-# /create with Cloudflare Workers
+# Discord ↔ GitHub Bridge
 
-A [slash-create](https://npm.im/slash-create) template, using [Cloudflare Workers](https://workers.cloudflare.com).
+A bidirectional sync tool between Discord forum posts and GitHub issues, built with TypeScript, Cloudflare Workers, and SQLite (via Drizzle). Automatically mirrors issues, comments, labels, status, and more between your GitHub repo and a Discord forum channel.
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Snazzah/slash-create-worker)
+Add it to your server: https://discord.com/oauth2/authorize?client_id=1392676268784222238
 
-## Getting Started
-### Cloning the repo
-You can either use degit to locally clone this repo without git, or [create a new repo from this template](https://github.com/Snazzah/slash-create-worker/generate) and clone that.
-```sh
-npx degit Snazzah/slash-create-worker
-```
+## What It Does
 
-After that, make sure to install dependencies using npm or yarn:
+- **Discord → GitHub**
+  - Creating a post in Discord creates a GitHub issue
+  - Comments in Discord sync to GitHub
+  - Tags on the post become labels on the issue
+  - Locking or closing a post locks or closes the issue
+  - Deleting the post closes and locks the issue
+  - Attachments are embedded directly into GitHub
+- **GitHub → Discord**
+  - Opening, closing, or locking an issue reflects in the Discord thread
+  - Issue comments show up in the forum post
+  - Labels on GitHub become tags on the post
+  - Reopened issues unarchive and unlock the thread
+  - Deleted GitHub comments are removed from Discord
+
+## Setup
+
 ```sh
 npm install
-# yarn
 ```
-### Installing and setting up Wrangler
-> Make sure to [sign up for a Cloudflare Workers account](https://dash.cloudflare.com/sign-up/workers) in a browser before continuing.
-Install wrangler with npm or yarn:
+
+Create a `.env` file with the relevant secrets:
+
+- `DISCORD_PUBLIC_KEY`
+- `DISCORD_CLIENT_ID`
+- `DISCORD_CLIENT_SECRET`
+- `DISCORD_BOT_TOKEN`
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+- `WEBHOOK_SECRET`
+- `DATABASE_URL`
+
+Then run:
+
 ```sh
-npm install -D wrangler@latest
-# yarn global add wrangler@latest
+npm run dev
 ```
-Read more about [installing wrangler](https://developers.cloudflare.com/workers/cli-wrangler/install-update).
 
-Afterwards, run `wrangler login` to login to your Cloudflare account with OAuth:
+## Running in Production
+
+Build and start the app:
+
 ```sh
-wrangler login
+npm start
 ```
 
-### Filling in secrets
-You can enter in environment secrets with `wrangler secret put`, here are the keys that are required to run this:
+To run migrations before boot, use:
+
 ```sh
-npx wrangler secret put DISCORD_APP_ID
-npx wrangler secret put DISCORD_PUBLIC_KEY
-npx wrangler secret put DISCORD_BOT_TOKEN
+npm run migrate && npm start
 ```
 
-### Development
-To run this locally, copy `.env.example` to `.dev.vars` and fill in the variables, then you can run `npm run dev` (or `yarn dev`) to start a local dev environment and use something like ngrok to tunnel it to a URL.
+## Deployment
 
-To sync commands in the development environment, copy `.env.example` to `development.env` and fill in the variables, then run `npm run sync:dev` (or `yarn sync:dev`).
+We publish a Docker container tagged with `latest` and the Git commit SHA to GitHub Container Registry.
 
-> Note: When you create a command, make sure to include it in the array of commands in `./src/commands/index.ts`.
+If you're looking to self-host it, you’ll probably want to do the same. Make sure to configure your secrets and webhook URL correctly.
 
-### Production
-To sync to production, copy `.env.example` to `.env` and fill in the variables, then run `npm run sync`. To publish code to a worker, run `npm run deploy`.
+## Notes
+
+- Uses SQLite via Drizzle ORM (Cloudflare D1-compatible)
+- Uses Octokit to talk to GitHub
+- Uses slash-create for Discord commands
+- Ignores its own actions to avoid feedback loops
