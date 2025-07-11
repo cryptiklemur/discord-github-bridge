@@ -69,12 +69,13 @@ async function appendSubIssuesToFirstMessage(repo: FullRepository, thread: Threa
  * Maps GitHub issue labels to corresponding Discord forum tag IDs for the given repo.
  */
 async function getAppliedTagIds(payload: any, repo: FullRepository): Promise<string[]> {
-  const labelIds: string[] = payload.issue.labels.map((l: any) => l.id);
+  const labelIds: string[] = payload.issue.labels.map((l: any) => l.id.toString());
   const dbTags = await db.query.tag.findMany({
     where: eq(tag.repositoryId, repo.id)
   });
 
   const tagIdMap = new Map<string, string>(dbTags.map((t) => [t.githubLabelId, t.githubLabelName!.toString()]));
+  console.log(tagIdMap, labelIds, labelIds.map((id) => tagIdMap.get(id)).filter(Boolean));
 
   return labelIds.map((id) => tagIdMap.get(id)).filter(Boolean) as string[];
 }
