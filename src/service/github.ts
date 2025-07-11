@@ -133,7 +133,6 @@ export async function createOrUpdateWebhookIfMissing(repoEntity: FullRepository)
   const alreadyExists = hooks.data.some((hook) => hook.config?.url === webhookUrl);
 
   if (alreadyExists) {
-    console.log(`[GitHub] Webhook already exists for ${owner}/${repo}`);
     return false;
   }
 
