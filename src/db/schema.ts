@@ -26,7 +26,9 @@ export const issue = sqliteTable('issue', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   repositoryId: integer('repository_id').notNull(),
   githubIssueId: integer('github_issue_id'),
+  githubIssueNumber: integer('github_issue_number'),
   discordForumPostId: blob('discord_forum_post_id'),
+  firstDiscordMessageId: text('first_discord_message_id'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(sql`CURRENT_TIMESTAMP`),
   githubAuthorId: integer('github_author_id'),
   githubAuthorName: text('github_author_name'),
@@ -97,6 +99,7 @@ export const tagRelations = relations(tag, ({ one }) => ({
 export type Repository = InferSelectModel<typeof repository>;
 export type User = InferSelectModel<typeof user>;
 export type RepositoryWithUser = InferSelectModel<typeof repository> & { user: User };
+export type FullRepository = InferSelectModel<typeof repository> & { user: User } & { tags: Tag[] };
 export type Issue = InferSelectModel<typeof issue>;
 export type Comment = InferSelectModel<typeof comment>;
 export type Tag = InferSelectModel<typeof tag>;

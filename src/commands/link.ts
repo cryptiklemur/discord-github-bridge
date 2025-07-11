@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { SlashCommand, SlashCreator, CommandContext } from 'slash-create';
-import { db, getRepoWithUserByChannel } from '../db/client.ts';
+import { db, getRepo } from '../db/client.ts';
 import { repository, user } from '../db/schema.ts';
 import { and, eq } from 'drizzle-orm';
 import { syncForum } from '../service/sync.ts';
@@ -80,7 +80,7 @@ export default class linkRepositoryCommand extends SlashCommand {
         issueTemplate,
         userId: userEntity.id
       });
-      const repo = (await getRepoWithUserByChannel(channel))!;
+      const repo = (await getRepo(channel))!;
 
       try {
         await syncForum(repo);
@@ -91,7 +91,7 @@ export default class linkRepositoryCommand extends SlashCommand {
 
       await ctx.send({
         ephemeral: true,
-        content: `Repository linked: ${url} → <#${channel}>${issueTemplate ? ' - Template - ' + issueTemplate : ''}`
+        content: `Repository linked: <${url}> → <#${channel}>${issueTemplate ? ' - Template - ' + issueTemplate : ''}`
       });
     } catch (err) {
       console.error(err);

@@ -1,10 +1,13 @@
-import { SlashCommand, CommandContext, SlashCreator } from 'slash-create';
-import { db, getRepoWithUserByChannel } from '../db/client.ts';
+import { SlashCommand, CommandContext, SlashCreator, AutocompleteContext } from 'slash-create';
+import { db, getRepo } from '../db/client.ts';
+import { Octokit } from 'octokit';
+import { createAppAuth } from '@octokit/auth-app';
 import { repository } from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
 import { Client } from 'eris';
 import { syncForum } from '../service/sync.ts';
 import { fetchUser } from '../utils/fetchUser.js';
+import { getClient } from '../service/github.js';
 
 export default class SyncRepositoryCommand extends SlashCommand {
   constructor(
@@ -28,7 +31,9 @@ export default class SyncRepositoryCommand extends SlashCommand {
           type: 3, // STRING
           name: 'template',
           description: 'Optional issue template name to override',
-          required: false
+          required: false,
+          autocomplete: true
+          // Autocomplete will be registered in the class
         }
       ]
     });
@@ -43,7 +48,7 @@ export default class SyncRepositoryCommand extends SlashCommand {
       return;
     }
 
-    const repo = await getRepoWithUserByChannel(channelId);
+    const repo = await getRepo(channelId);
 
     if (!repo) {
       await ctx.send({
@@ -63,7 +68,7 @@ export default class SyncRepositoryCommand extends SlashCommand {
     }
 
     try {
-      await syncForum((await getRepoWithUserByChannel(channelId))!);
+      await syncForum((await getRepo(channelId))!);
 
       await ctx.send({
         ephemeral: true,
@@ -74,6 +79,43 @@ export default class SyncRepositoryCommand extends SlashCommand {
         ephemeral: true,
         content: (e as Error).message
       });
+    }
+  }
+
+  /**
+   * Autocomplete handler for the template option.
+   */
+  async autocomplete(ctx: AutocompleteContext): Promise<void> {
+    if (ctx.focused === 'template') {
+      const channelId = ctx.options.channel;
+      const repo = await getRepo(channelId);
+      if (!repo?.user?.githubInstallationId) {
+        await ctx.sendResults([]);
+        return;
+      }
+
+      const [owner, repoName] = repo.url.replace('https://github.com/', '').split('/');
+      try {
+        const octokit = getClient(repo.user.githubInstallationId);
+        const { data: contents } = await octokit.rest.repos.getContent({
+          owner,
+          repo: repoName,
+          path: '.github/ISSUE_TEMPLATE'
+        });
+
+        const items = Array.isArray(contents)
+          ? contents
+              .filter((f) => f.type === 'file' && /\.(ya?ml|md)$/.test(f.name))
+              .map((f) => ({
+                name: f.name.replace(/\.(ya?ml|md)$/, ''),
+                value: f.name.replace(/\.(ya?ml|md)$/, '')
+              }))
+          : [];
+
+        await ctx.sendResults(items.slice(0, 25));
+      } catch (e) {
+        await ctx.sendResults([]);
+      }
     }
   }
 }

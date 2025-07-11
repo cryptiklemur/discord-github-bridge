@@ -5,13 +5,13 @@ import compression from 'compression';
 import { githubWebhookMiddleware, handleGithubWebhookEvent } from './handleGithubWebhookEvent.js';
 
 // src/types/express.d.ts
-import { RepositoryWithUser } from '../db/schema.ts';
+import { FullRepository } from '../db/schema.ts';
 import { handleGithubAppCallback } from './handleGithubAppCallback.ts';
 
 declare global {
   namespace Express {
     interface Request {
-      repo?: RepositoryWithUser;
+      repo?: FullRepository;
       rawBody?: Buffer;
     }
   }
@@ -27,8 +27,14 @@ app
   .get('/github/callback', handleGithubAppCallback)
   .post('/github/webhook', githubWebhookMiddleware, async (req, res) => {
     try {
+      // Ignore events where the sender is the GitHub App itself
+      if (req.body.sender?.id.toString() === process.env.GITHUB_BOT_USER_ID!) {
+        res.sendStatus(204);
+        return;
+      }
+
       await handleGithubWebhookEvent(req);
-      res.sendStatus(204);
+      res.sendStatus(200);
     } catch (err) {
       console.error('Webhook handling failed:', err);
       res.sendStatus(500);

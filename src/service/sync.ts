@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { repository, RepositoryWithUser, tag } from '../db/schema.ts';
+import { FullRepository, tag } from '../db/schema.ts';
 import { createOrUpdateWebhookIfMissing, fetchIssueTemplate, fetchLabels, parseYamlIssueTemplate } from './github.ts';
-import { db, getRepoWithUserByChannel } from '../db/client.ts';
+import { db, getRepo } from '../db/client.ts';
 import { client } from '../index.ts';
 import { ForumChannel } from 'eris';
 
@@ -31,7 +31,7 @@ export function generatePostGuidelines(templateContent: string | null, isYaml: b
   ].join('\n');
 }
 
-export async function syncForum(repo: RepositoryWithUser) {
+export async function syncForum(repo: FullRepository) {
   await createOrUpdateWebhookIfMissing(repo);
 
   const { content: templateContent, isYaml } = await fetchIssueTemplate(repo);
@@ -60,8 +60,11 @@ export async function syncForum(repo: RepositoryWithUser) {
   if (!forumChannel) {
     throw new Error('Forum channel not found or is not editable.');
   }
+  const tags = await db.query.tag.findMany({ where: eq(tag.repositoryId, repo.id) });
+  const availableTags = tags.map((l) => ({ id: l.discordTagId as string, name: l.githubLabelName, moderated: true }));
+
   forumChannel = await forumChannel.edit({
-    availableTags: labels.map((l: any) => ({ id: l.id, name: l.name, moderated: true })),
+    availableTags,
     topic: guidelines.slice(0, 4096) // truncate to Discord max
   });
 
@@ -69,5 +72,5 @@ export async function syncForum(repo: RepositoryWithUser) {
     await db.update(tag).set({ discordTagId: discordTag.id }).where(eq(tag.githubLabelName, discordTag.name));
   }
 
-  return getRepoWithUserByChannel(repo.discordChannelId).then((r) => r!);
+  return getRepo(repo.discordChannelId).then((r) => r!);
 }

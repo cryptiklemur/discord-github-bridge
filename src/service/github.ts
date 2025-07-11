@@ -2,7 +2,7 @@ import { Octokit } from 'octokit';
 import { Base64 } from 'js-base64';
 import { createAppAuth } from '@octokit/auth-app';
 import yaml from 'yaml';
-import { RepositoryWithUser } from '../db/schema.ts';
+import { FullRepository } from '../db/schema.ts';
 import { OctokitOptions } from '@octokit/core/types';
 
 export function extractLabelsFromTemplate(templateContent: string, isYaml: boolean): string[] {
@@ -38,7 +38,7 @@ export function extractLabelsFromTemplate(templateContent: string, isYaml: boole
 }
 
 export async function fetchIssueTemplate(
-  repoEntity: RepositoryWithUser
+  repoEntity: FullRepository
 ): Promise<{ content: string | null; defaultLabels: string[]; isYaml: boolean }> {
   const octokit = getClient(repoEntity.user.githubInstallationId);
   if (!repoEntity.issueTemplate) {
@@ -73,7 +73,7 @@ export async function fetchIssueTemplate(
   return { content: null, defaultLabels: [], isYaml: false };
 }
 
-export async function fetchLabels(repoEntity: RepositoryWithUser) {
+export async function fetchLabels(repoEntity: FullRepository) {
   const octokit = getClient(repoEntity.user.githubInstallationId);
   const match = repoEntity.url.match(/github\.com\/([^/]+)\/([^/]+)/);
   const [, owner, repo] = match!;
@@ -117,7 +117,7 @@ export function parseYamlIssueTemplate(yamlContent: string): string {
 
 const WEBHOOK_DOMAIN = (process.env.WEBHOOK_DOMAIN ?? 'https://dgb.le.mr/').replaceAll(/\/$/gm, '');
 
-export async function createOrUpdateWebhookIfMissing(repoEntity: RepositoryWithUser): Promise<boolean> {
+export async function createOrUpdateWebhookIfMissing(repoEntity: FullRepository): Promise<boolean> {
   const match = repoEntity.url.match(/github\.com\/([^/]+)\/([^/]+)/);
   if (!match) throw new Error(`Invalid GitHub URL: ${repoEntity.url}`);
   const [, owner, repo] = match;
@@ -131,7 +131,7 @@ export async function createOrUpdateWebhookIfMissing(repoEntity: RepositoryWithU
   const alreadyExists = hooks.data.some((hook) => hook.config?.url === webhookUrl);
 
   if (alreadyExists) {
-    console.log(`[GitHub] Webhook already exists for ${owner}/${repo}`);
+    // console.log(`[GitHub] Webhook already exists for ${owner}/${repo}`);
     return false;
   }
 

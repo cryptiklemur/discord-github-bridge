@@ -4,12 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "sync": "slash-up sync",
-    "sync:dev": "slash-up sync -e development",
     "start": "tsx src/index.ts",
     "dev": "tsx --watch src/index.ts",
     "lint": "eslint --ext .ts .",
-    "lint:fix": "eslint --ext .ts . --fix"
+    "lint:fix": "eslint --ext .ts . --fix",
+    "migrate": "drizzle-kit migrate"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20231025.0",
