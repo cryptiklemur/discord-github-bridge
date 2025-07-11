@@ -69,12 +69,12 @@ async function appendSubIssuesToFirstMessage(repo: FullRepository, thread: Threa
  * Maps GitHub issue labels to corresponding Discord forum tag IDs for the given repo.
  */
 async function getAppliedTagIds(payload: any, repo: FullRepository): Promise<string[]> {
-  const labelIds: number[] = payload.issue.labels.map((l: any) => l.id);
+  const labelIds: string[] = payload.issue.labels.map((l: any) => l.id);
   const dbTags = await db.query.tag.findMany({
     where: eq(tag.repositoryId, repo.id)
   });
 
-  const tagIdMap = new Map<number, string>(dbTags.map((t) => [t.githubLabelId, t.discordTagId!.toString()]));
+  const tagIdMap = new Map<string, string>(dbTags.map((t) => [t.githubLabelId, t.githubLabelName!.toString()]));
 
   return labelIds.map((id) => tagIdMap.get(id)).filter(Boolean) as string[];
 }
@@ -467,7 +467,6 @@ async function handleEditedIssue(payload: any, repo: FullRepository) {
  */
 async function handleLabelChange(payload: any, repo: FullRepository) {
   if (payload.issue?.pull_request) return;
-  console.log('Issue label changed. Updating');
 
   const issueId = payload.issue.id;
   const linked = await db.query.issue.findFirst({
@@ -490,7 +489,7 @@ async function handleLabelChange(payload: any, repo: FullRepository) {
   const appliedTagIds = await getAppliedTagIds(payload, repo);
 
   // Update the Discord thread's appliedTags
-  const thread = client.getChannel(String(linked.discordForumPostId)) as ThreadChannel;
+  const thread = client.getChannel(linked.discordForumPostId) as ThreadChannel;
   if (thread) {
     await thread.edit({ appliedTags: appliedTagIds });
   }
