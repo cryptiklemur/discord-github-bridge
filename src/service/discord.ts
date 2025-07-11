@@ -20,7 +20,7 @@ function getLabels(repo: FullRepository, thread: PublicThreadChannel<true>) {
 }
 
 export async function handleNewDiscordThread(thread: PublicThreadChannel<true>) {
-  const repo = await getRepo(thread.parentID!);
+  let repo = await getRepo(thread.parentID!);
   repo = await syncForum(repo);
   if (!repo || !repo.user || !repo.user.githubInstallationId) {
     console.log('handleNewDiscordThread: Missing repo, user, or installation ID.');
