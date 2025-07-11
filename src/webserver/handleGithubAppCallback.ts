@@ -1,5 +1,3 @@
-import { Octokit } from 'octokit';
-import { createAppAuth } from '@octokit/auth-app';
 import { db } from '../db/client.ts';
 import { user } from '../db/schema.ts';
 import express from 'express';
@@ -21,14 +19,14 @@ export async function handleGithubAppCallback(req: express.Request, res: express
   const { data: installation } = await appOctokit.rest.apps.getInstallation({
     installation_id: installationId
   });
-  const githubUserId = installation.account!.id as number;
+  const githubUserId = installation.account!.id.toString();
   const githubLogin = installation.account!.login as string;
 
   await db.insert(user).values({
     discordUserId,
     githubUserId,
     githubLogin,
-    githubInstallationId: installationId
+    githubInstallationId: installationId.toString()
   });
 
   return res.send(

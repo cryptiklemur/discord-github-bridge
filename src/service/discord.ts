@@ -1,4 +1,4 @@
-import Eris, { Message, PublicThreadChannel } from 'eris';
+import { Message, PublicThreadChannel } from 'eris';
 import { db, getRepo } from '../db/client.ts';
 import { comment, FullRepository, issue } from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
@@ -281,7 +281,7 @@ export async function handleDeletedDiscordThread(thread: PublicThreadChannel<tru
       issue_number: issueRecord.githubIssueNumber,
       body: 'This issue was automatically closed and locked because the corresponding Discord post was deleted.'
     });
-  } catch (err) {
+  } catch {
     // console.error('handleDeletedDiscordThread: Failed to close and lock GitHub issue:', err);
   }
 }

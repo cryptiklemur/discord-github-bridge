@@ -1,7 +1,5 @@
 import { SlashCommand, CommandContext, SlashCreator, AutocompleteContext } from 'slash-create';
 import { db, getRepo } from '../db/client.ts';
-import { Octokit } from 'octokit';
-import { createAppAuth } from '@octokit/auth-app';
 import { repository } from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
 import { Client } from 'eris';
@@ -113,7 +111,7 @@ export default class SyncRepositoryCommand extends SlashCommand {
           : [];
 
         await ctx.sendResults(items.slice(0, 25));
-      } catch (e) {
+      } catch {
         await ctx.sendResults([]);
       }
     }
