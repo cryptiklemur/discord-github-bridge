@@ -6,9 +6,9 @@ export const user = mysqlTable(
   {
     id: int('id').primaryKey().autoincrement(),
     discordUserId: varchar('discord_user_id', { length: 32 }).notNull(),
-    githubUserId: int('github_user_id').notNull(),
+    githubUserId: varchar('github_user_id', { length: 128 }).notNull(),
     githubLogin: varchar('github_login', { length: 32 }).notNull(),
-    githubInstallationId: int('github_installation_id').notNull(),
+    githubInstallationId: varchar('github_installation_id', { length: 128 }).notNull(),
     createdAt: timestamp('created_at').defaultNow()
   },
   (table) => [uniqueIndex('user_discord_id_unique').on(table.discordUserId, table.githubUserId)]
@@ -35,12 +35,12 @@ export const issue = mysqlTable(
   {
     id: int('id').primaryKey().autoincrement(),
     repositoryId: int('repository_id').notNull(),
-    githubIssueId: int('github_issue_id'),
+    githubIssueId: varchar('github_issue_id', { length: 128 }),
     githubIssueNumber: int('github_issue_number'),
     discordForumPostId: varchar('discord_forum_post_id', { length: 32 }),
     firstDiscordMessageId: varchar('first_discord_message_id', { length: 32 }),
     createdAt: timestamp('created_at').defaultNow(),
-    githubAuthorId: int('github_author_id'),
+    githubAuthorId: varchar('github_author_id', { length: 128 }),
     githubAuthorName: varchar('github_author_name', { length: 128 }),
     discordAuthorId: varchar('discord_author_id', { length: 32 }),
     discordAuthorName: varchar('discord_author_name', { length: 128 }),
@@ -54,11 +54,11 @@ export const comment = mysqlTable(
   'comment',
   {
     id: int('id').primaryKey().autoincrement(),
-    githubCommentId: int('github_comment_id'),
+    githubCommentId: varchar('github_comment_id', { length: 128 }),
     discordMessageId: varchar('discord_message_id', { length: 32 }),
     issueId: int('issue_id').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
-    githubAuthorId: int('github_author_id'),
+    githubAuthorId: varchar('github_author_id', { length: 128 }),
     githubAuthorName: varchar('github_author_name', { length: 128 }),
     discordAuthorId: varchar('discord_author_id', { length: 32 }),
     discordAuthorName: varchar('discord_author_name', { length: 128 }),
@@ -73,7 +73,7 @@ export const tag = mysqlTable(
   {
     id: int('id').primaryKey().autoincrement(),
     repositoryId: int('repository_id').notNull(),
-    githubLabelId: int('github_label_id').notNull(),
+    githubLabelId: varchar('github_label_id', { length: 128 }).notNull(),
     githubLabelName: varchar('github_label_name', { length: 128 }).notNull(),
     discordTagId: varchar('discord_tag_id', { length: 32 }), // nullable until created
     createdAt: timestamp('created_at').defaultNow()

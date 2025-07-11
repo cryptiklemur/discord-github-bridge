@@ -8,6 +8,13 @@
       "when": 1752195960416,
       "tag": "0000_lame_network",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1752196755373,
+      "tag": "0001_public_iron_fist",
+      "breakpoints": true
     }
   ]
 }

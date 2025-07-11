@@ -58,10 +58,9 @@ export default class linkRepositoryCommand extends SlashCommand {
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(repository)
-        .where(and(eq(repository.url, url), eq(repository.discordChannelId, channel)));
+      const existing = await db.query.repository.findFirst({
+        where: and(eq(repository.url, url), eq(repository.discordChannelId, channel))
+      });
       if (existing) {
         await ctx.send({
           ephemeral: true,

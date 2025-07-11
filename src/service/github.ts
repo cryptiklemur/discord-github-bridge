@@ -133,7 +133,7 @@ export async function createOrUpdateWebhookIfMissing(repoEntity: FullRepository)
   const alreadyExists = hooks.data.some((hook) => hook.config?.url === webhookUrl);
 
   if (alreadyExists) {
-    // console.log(`[GitHub] Webhook already exists for ${owner}/${repo}`);
+    console.log(`[GitHub] Webhook already exists for ${owner}/${repo}`);
     return false;
   }
 
@@ -155,7 +155,7 @@ export async function createOrUpdateWebhookIfMissing(repoEntity: FullRepository)
   return true;
 }
 
-export function getClient(installationId?: number): Octokit {
+export function getClient(installationId?: string): Octokit {
   let privateKey: string;
   if (process.env.GITHUB_APP_PRIVATE_KEY) {
     privateKey = Buffer.from(process.env.GITHUB_APP_PRIVATE_KEY!, 'base64').toString('utf8');
