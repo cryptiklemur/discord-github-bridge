@@ -46,7 +46,8 @@ export default class SyncIssueCommand extends SlashCommand {
     }
 
     // Sync comments from thread
-    for (const message of await thread.getMessages()) {
+    const messages = await thread.getMessages();
+    for (const message of messages.reverse()) {
       if (message.id === thread.id) continue; // skip the original post
       await handleNewDiscordMessageInThread(message);
     }
