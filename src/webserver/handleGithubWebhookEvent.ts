@@ -74,8 +74,7 @@ async function getAppliedTagIds(payload: any, repo: FullRepository): Promise<str
     where: eq(tag.repositoryId, repo.id)
   });
 
-  const tagIdMap = new Map<string, string>(dbTags.map((t) => [t.githubLabelId, t.githubLabelName!.toString()]));
-  console.log(tagIdMap, labelIds, labelIds.map((id) => tagIdMap.get(id)).filter(Boolean));
+  const tagIdMap = new Map<string, string>(dbTags.map((t) => [t.githubLabelId, t.discordTagId!.toString()]));
 
   return labelIds.map((id) => tagIdMap.get(id)).filter(Boolean) as string[];
 }
@@ -103,7 +102,6 @@ export async function githubWebhookMiddleware(req: Request, res: Response, next:
       return res.status(401).send('Invalid signature');
     }
 
-    repo = await syncForum(repo);
     req.repo = repo;
     req.rawBody = rawBody;
     req.body = json;

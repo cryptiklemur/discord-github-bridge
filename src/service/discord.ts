@@ -4,6 +4,7 @@ import { comment, FullRepository, issue } from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
 import { getClient } from './github.ts';
 import { client } from '../index.js';
+import {syncForum} from './sync.js';
 
 function getLabels(repo: FullRepository, thread: PublicThreadChannel<true>) {
   const tagMap = repo.tags.reduce(
@@ -20,6 +21,7 @@ function getLabels(repo: FullRepository, thread: PublicThreadChannel<true>) {
 
 export async function handleNewDiscordThread(thread: PublicThreadChannel<true>) {
   const repo = await getRepo(thread.parentID!);
+  repo = await syncForum(repo);
   if (!repo || !repo.user || !repo.user.githubInstallationId) {
     console.log('handleNewDiscordThread: Missing repo, user, or installation ID.');
     return;
